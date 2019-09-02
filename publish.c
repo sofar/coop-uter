@@ -128,7 +128,7 @@ int main(void) {
 	float discharge_current_max_day = regs[0xe] / 100.;
 
 	float charge_power_max_day = regs[0xf] / 100.;
-	float dicharge_power_max_day = regs[0x10] / 100.;
+	float discharge_power_max_day = regs[0x10] / 100.;
 
 	int charge_amp_hours_day = regs[0x11];
 	int discharge_amp_hours_day = regs[0x12];
@@ -175,7 +175,7 @@ int main(void) {
 			"\"charge_current_max_day\":\"%.2f\","
 			"\"discharge_current_max_day\":\"%.2f\","
 			"\"charge_power_max_day\":\"%.2f\","
-			"\"dicharge_power_max_day\":\"%.2f\","
+			"\"discharge_power_max_day\":\"%.2f\","
 			"\"charge_amp_hours_day\":\"%d\","
 			"\"discharge_amp_hours_day\":\"%d\","
 			"\"charge_generated_day\":\"%.2f\","
@@ -189,7 +189,7 @@ int main(void) {
 			panel_voltage, panel_current, panel_power,
 			battery_voltage_min_day, battery_voltage_max_day,
 			charge_current_max_day, discharge_current_max_day,
-			charge_power_max_day, dicharge_power_max_day,
+			charge_power_max_day, discharge_power_max_day,
 			charge_amp_hours_day, discharge_amp_hours_day,
 			charge_generated_day, charge_consumed_day,
 			state, error_strings) < 0)
