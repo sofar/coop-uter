@@ -181,7 +181,7 @@ int main(void) {
 			"\"charge_generated_day\":\"%.2f\","
 			"\"charge_consumed_day\":\"%.2f\","
 			"\"charging_state\":\"%s\","
-			"\"error_state\":\"%s\","
+			"\"error_state\":\"%s\""
 			"}",
 			battery_capacity, battery_voltage, battery_current,
 			controller_temperature,
