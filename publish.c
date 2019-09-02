@@ -199,40 +199,6 @@ int main(void) {
 		exit(EXIT_FAILURE);
 	free(msg);
 
-	//FIXME move to separate project
-	//FIXME add shutdown control
-	//FIXME add sleep/low power state control
-
-	/* CPU/system health */
-	float temp = 0.;
-	int cores = 0;
-	int n = 0;
-	for (;;) {
-		char *fname = NULL;
-		if (asprintf(&fname, "/sys/devices/platform/coretemp.0/hwmon/hwmon0/temp%i_input", n++) < 0)
-			exit(EXIT_FAILURE);
-		FILE *f = fopen(fname, "r");
-		free(fname);
-		if (!f) {
-			if (cores == 0)
-				continue;
-			break;
-		}
-		int t;
-		if (fscanf(f, "%i", &t) != 1)
-			exit(EXIT_FAILURE);
-		fclose(f);
-		temp += (float)t / 1000.;
-		cores++;
-	}
-	temp = temp / (float)cores;
-	
-	if (asprintf(&msg, "{ \"cpu_temperature_average\":\"%.1f\" }", temp) < 0)
-		exit(EXIT_FAILURE);
-	if (mosquitto_publish(mosq, NULL, "/cooper/system/state", strlen(msg), msg, 0, true) != 0)
-		exit(EXIT_FAILURE);
-	free(msg);
-
 	mosquitto_disconnect(mosq);
 	mosquitto_loop_stop(mosq, false);
 	mosquitto_destroy(mosq);
