@@ -31,6 +31,10 @@ controller data and dump it to standard out. Mostly for debugging and
 inspection purposes. With it I found out that the Renogy spec has 2
 values reversed.
 
+- renogy-door - a program to drive a shutter (door) using 2 GPIO's
+and track it's state through 2 more GPIO's connected to door
+sensors.
+
 
 ## License
 
