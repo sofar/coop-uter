@@ -190,7 +190,7 @@ static void message_callback(
 			return;
 		}
 
-		fprintf(stderr, "Closing door");
+		fprintf(stderr, "Closing door\n");
 
 		command = true;
 		command_time = time(NULL);
@@ -206,7 +206,7 @@ static void message_callback(
 			return;
 		}
 
-		fprintf(stderr, "Opening door");
+		fprintf(stderr, "Opening door\n");
 
 		command = true;
 		command_time = time(NULL);
@@ -215,6 +215,11 @@ static void message_callback(
 		// perform the change
 		gpiod_ctxless_set_value("3", 18, 1, true, GPIOD_CONSUMER, usl, NULL);
 		gpiod_ctxless_set_value("3", 18, 0, true, GPIOD_CONSUMER, usl, NULL);
+	} else if (((char *)message->payload)[0] == 'q') {
+		// cancel commands, reset errors, read state
+		command = false;
+		state = 5;
+		publish_state(mosq);
 	} else {
 		fprintf(stderr, "Invalid command received: %c\n", ((char *)message->payload)[0]);
 	}
