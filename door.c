@@ -68,7 +68,7 @@ static bool command = false; // command pending
 // 2 minute intervals between normal idle publishes
 #define CHECK_INTERVAL 120
 
-void sigfunc(int s __attribute__ ((unused)))
+static void sigfunc(int s __attribute__ ((unused)))
 {
 	stop = 1;
 }
@@ -159,7 +159,7 @@ static void get_state()
 	}
 }
 
-void publish_state(struct mosquitto *mosq)
+static void publish_state(struct mosquitto *mosq)
 {
 	char *msg = NULL;
 
