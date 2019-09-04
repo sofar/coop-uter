@@ -104,6 +104,13 @@ static void get_state()
 	} else if (state == 0) {
 		if ((sensor_closed == 1) && (sensor_open == 0)) {
 			return;
+		} else if (sensor_closed == 0) {
+			fprintf(stderr, "Door no longer is closed\n");
+			if (sensor_open == 0) {
+				state = 1;
+			} else if (sensor_open == 1) {
+				state = 2;
+			}
 		} else {
 			fprintf(stderr, "Invalid sensor data for closed state.\n");
 			state = 4;
@@ -111,27 +118,19 @@ static void get_state()
 	} else if (state == 2) {
 		if ((sensor_closed == 0) && (sensor_open == 1)) {
 			return;
+		} else if (sensor_open == 0) {
+			fprintf(stderr, "Door no longer is open\n");
+			if (sensor_closed == 0) {
+				state = 3;
+			} else if (sensor_closed == 1) {
+				state = 0;
+			}
 		} else {
 			fprintf(stderr, "Invalid sensor data for open state.\n");
 			state = 4;
 		}
 	} else {
-		if (!command) {
-			fprintf(stderr, "Internal error: command not active but state opening/closing\n");
-			state = 4;
-		} else {
-			if (state == 1) { // opening
-				if ((sensor_closed == 0) && (sensor_open == 1)) {
-					state = 2;
-					command = false;
-				}
-			} else if (state == 3) { // closing
-				if ((sensor_closed == 1) && (sensor_open == 0)) {
-					state = 0;
-					command = false;
-				}
-			}
-
+		if (command) {
 			time_t t = time(NULL) -  command_time;
 			if (t > 120) {
 				// command should have finished, check it
@@ -142,6 +141,19 @@ static void get_state()
 				}
 			}
 		}
+
+		if (state == 1) { // opening
+			if ((sensor_closed == 0) && (sensor_open == 1)) {
+				state = 2;
+				command = false;
+			}
+		} else if (state == 3) { // closing
+			if ((sensor_closed == 1) && (sensor_open == 0)) {
+				state = 0;
+				command = false;
+			}
+		}
+
 	}
 }
 
