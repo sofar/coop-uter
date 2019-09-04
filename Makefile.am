@@ -1,5 +1,5 @@
 
-AM_CFLAGS = -g $(modbus_CFLAGS) $(mosquitto_CFLAGS) $(gpiod_CFLAGS) \
+AM_CFLAGS = -g $(modbus_CFLAGS) $(mosquitto_CFLAGS) $(gpiod_CFLAGS) $(config_CFLAGS) \
 	 -Wall -Wno-uninitialized -W -D_FORTIFY_SOURCE=2 -L/usr/local/lib64
 
 bin_PROGRAMS = renogy-dump renogy-pub renogy-sys renogy-door
@@ -20,4 +20,5 @@ renogy_sys_LDADD = \
 
 renogy_door_LDADD = \
 	$(mosquitto_LIBS) \
-	$(gpiod_LIBS)
+	$(gpiod_LIBS) \
+	$(config_LIBS)

@@ -37,8 +37,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <mosquitto.h>
 #include <gpiod.h>
+#include <libconfig.h>
 
 #define GPIOD_CONSUMER "renogy-door"
+#define CONFIG_PATH "/etc/mqtt.conf"
 
 static const char* door_states[] = {
 	"closed", //0
@@ -245,6 +247,27 @@ int main(void)
 	struct mosquitto *mosq = NULL;
 	int ret;
 	int interval = 0; // publish shortly after connecting to the server
+	config_t cfg;
+	const char *conf_server;
+	int conf_port;
+
+	// parse configs
+	config_init(&cfg);
+	if (!config_read_file(&cfg, CONFIG_PATH)) {
+		fprintf(stderr, "%s:%d - %s\n", config_error_file(&cfg), config_error_line(&cfg), config_error_text(&cfg));
+		exit(EXIT_FAILURE);
+	}
+
+	if (!config_lookup_string(&cfg, "server", &conf_server)) {
+		fprintf(stderr, "No server defined in " CONFIG_PATH "\n");
+		exit(EXIT_FAILURE);
+	}
+	if (!config_lookup_int(&cfg, "port", &conf_port)) {
+		fprintf(stderr, "No port defined in " CONFIG_PATH "\n");
+		exit(EXIT_FAILURE);
+	}
+
+	fprintf(stderr, "MQTT server: %s:%d\n", conf_server, conf_port);
 
 	// what to do if terminated
 	signal(SIGINT, sigfunc);
@@ -270,7 +293,7 @@ int main(void)
 
 	mosquitto_message_callback_set(mosq, message_callback);
 
-	while (mosquitto_connect(mosq, "192.168.1.52", 1883, 15) != 0) {
+	while (mosquitto_connect(mosq, conf_server, conf_port, 15) != 0) {
 		fprintf(stderr, "Waiting for connection to server\n");
 		sleep(300);
 	}
@@ -310,5 +333,7 @@ int main(void)
 	mosquitto_loop_stop(mosq, false);
 	mosquitto_destroy(mosq);
 	mosquitto_lib_cleanup();
+
+	config_destroy(&cfg);
 }
 

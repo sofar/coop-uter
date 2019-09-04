@@ -15,6 +15,7 @@ AC_PROG_CC
 PKG_CHECK_MODULES([modbus], [libmodbus])
 PKG_CHECK_MODULES([mosquitto], [libmosquitto])
 PKG_CHECK_MODULES([gpiod], [libgpiod])
+PKG_CHECK_MODULES([config], [libconfig])
 
 # Checks for header files.
 
