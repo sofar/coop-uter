@@ -92,7 +92,7 @@ static void get_state()
 {
 	get_sensor_data();
 
-	if ((sensor_closed == 0) && (sensor_open == 0)) {
+	if ((sensor_closed == 1) && (sensor_open == 1)) {
 		fprintf(stderr, "Invalid sensor data: both open and closed.\n");
 		state = 4;
 	} else if (state == 5) {
