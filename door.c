@@ -176,7 +176,7 @@ void publish_state(struct mosquitto *mosq)
 
 	free(msg);
 
-	fprintf(stderr, "published state info: %d\n", state);
+	fprintf(stderr, "published state info: %d (%s)\n", state, door_states[state]);
 	published_state = state;
 }
 
