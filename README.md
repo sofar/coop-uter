@@ -14,6 +14,14 @@ Atomic PI, etc. I paid for all the hardware and wrote this software
 in my free time.
 
 
+## Dependencies
+
+- libmosquitto
+- libgpiod
+- libmodbus
+- libconfig
+
+
 ## What's in it?
 
 - renogy-pub - a program that regularly reads out the libmodbus data
@@ -34,6 +42,18 @@ values reversed.
 - renogy-door - a program to drive a shutter (door) using 2 GPIO's
 and track it's state through 2 more GPIO's connected to door
 sensors.
+
+
+## Config
+
+- `/etc/mqtt.conf` - create this to signal the program what MQTT
+server to connect to. There is no default, `server` and `port`
+are required values. Example:
+
+```
+server = "localhost";
+port = 1883;
+```
 
 
 ## License
