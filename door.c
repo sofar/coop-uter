@@ -244,6 +244,7 @@ int main(void)
 	config_t cfg;
 	const char *conf_server;
 	int conf_port;
+	int sl = 1;
 
 	// parse configs
 	config_init(&cfg);
@@ -288,8 +289,11 @@ int main(void)
 	mosquitto_message_callback_set(mosq, message_callback);
 
 	while (mosquitto_connect(mosq, conf_server, conf_port, 15) != 0) {
-		fprintf(stderr, "Waiting for connection to server\n");
-		sleep(300);
+		if (sl == 1)
+			fprintf(stderr, "Waiting for connection to server\n");
+		if (sl < 32)
+			sl <<= 1;
+		sleep(sl);
 	}
 
 	ret = mosquitto_subscribe(mosq, NULL, topic_control, 0);
