@@ -13,7 +13,8 @@ renogy_dump_LDADD = \
 
 renogy_pub_LDADD = \
 	$(modbus_LIBS) \
-	$(mosquitto_LIBS)
+	$(mosquitto_LIBS) \
+	$(config_LIBS)
 
 renogy_sys_LDADD = \
 	$(mosquitto_LIBS)

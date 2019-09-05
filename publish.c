@@ -33,6 +33,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <modbus.h>
 #include <mosquitto.h>
+#include <libconfig.h>
+
+#define CONFIG_PATH "/etc/mqtt.conf"
 
 static const char* charging_states[] = {
 	"charging deactivated",
@@ -69,6 +72,27 @@ int main(void) {
 	int ret;
 	uint16_t regs[64];
 	struct mosquitto *mosq = NULL;
+	config_t cfg;
+	const char *conf_server;
+	int conf_port;
+
+	// parse configs
+	config_init(&cfg);
+	if (!config_read_file(&cfg, CONFIG_PATH)) {
+		fprintf(stderr, "%s:%d - %s\n", config_error_file(&cfg), config_error_line(&cfg), config_error_text(&cfg));
+		exit(EXIT_FAILURE);
+	}
+
+	if (!config_lookup_string(&cfg, "server", &conf_server)) {
+		fprintf(stderr, "No server defined in " CONFIG_PATH "\n");
+		exit(EXIT_FAILURE);
+	}
+	if (!config_lookup_int(&cfg, "port", &conf_port)) {
+		fprintf(stderr, "No port defined in " CONFIG_PATH "\n");
+		exit(EXIT_FAILURE);
+	}
+
+	fprintf(stderr, "MQTT server: %s:%d\n", conf_server, conf_port);
 
 	ctx = modbus_new_rtu("/dev/ttyS1", 9600, 'N', 8, 1);
 	if (!ctx) {
@@ -76,6 +100,7 @@ int main(void) {
 		exit(EXIT_FAILURE);
 	}
 
+	// setup modbus
 	modbus_set_slave(ctx, 1);
 
 	if (modbus_connect(ctx) == -1) {
@@ -103,7 +128,7 @@ int main(void) {
 		exit(EXIT_FAILURE);
 	if (mosquitto_loop_start(mosq) != MOSQ_ERR_SUCCESS)
 		exit(EXIT_FAILURE);
-	if (mosquitto_connect(mosq, "192.168.1.52", 1883, 15))
+	if (mosquitto_connect(mosq, conf_server, conf_port, 15))
 		exit(EXIT_FAILURE);
 
 	/* create mqtt publish stream */
@@ -203,5 +228,7 @@ int main(void) {
 	mosquitto_loop_stop(mosq, false);
 	mosquitto_destroy(mosq);
 	mosquitto_lib_cleanup();
+
+	config_destroy(&cfg);
 }
 
