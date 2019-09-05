@@ -66,7 +66,7 @@ static time_t command_time = 0; // time() of last command received
 static bool command = false; // command pending
 
 // 2 minute intervals between normal idle publishes
-#define CHECK_INTERVAL 120
+#define CHECK_INTERVAL 150
 
 static void sigfunc(int s __attribute__ ((unused)))
 {
@@ -98,12 +98,14 @@ static void get_state()
 		fprintf(stderr, "Invalid sensor data: both open and closed.\n");
 		state = 4;
 	} else if (state == 5) {
+		// initializing
 		if ((sensor_closed == 1) && (sensor_open == 0)) {
 			state = 0;
 		} else if ((sensor_closed == 0) && (sensor_open == 1)) {
 			state = 2;
 		}
 	} else if (state == 0) {
+		// closed
 		if ((sensor_closed == 1) && (sensor_open == 0)) {
 			return;
 		} else if (sensor_closed == 0) {
@@ -113,11 +115,9 @@ static void get_state()
 			} else if (sensor_open == 1) {
 				state = 2;
 			}
-		} else {
-			fprintf(stderr, "Invalid sensor data for closed state.\n");
-			state = 4;
 		}
 	} else if (state == 2) {
+		// open
 		if ((sensor_closed == 0) && (sensor_open == 1)) {
 			return;
 		} else if (sensor_open == 0) {
@@ -127,23 +127,8 @@ static void get_state()
 			} else if (sensor_closed == 1) {
 				state = 0;
 			}
-		} else {
-			fprintf(stderr, "Invalid sensor data for open state.\n");
-			state = 4;
 		}
 	} else {
-		if (command) {
-			time_t t = time(NULL) -  command_time;
-			if (t > 120) {
-				// command should have finished, check it
-				if ((state == 1) || (state == 3)) {
-					fprintf(stderr, "Command %d did not finish within time.\n", state);
-					state = 4;
-					command = false;
-				}
-			}
-		}
-
 		if (state == 1) { // opening
 			if ((sensor_closed == 0) && (sensor_open == 1)) {
 				state = 2;
@@ -156,14 +141,22 @@ static void get_state()
 			}
 		}
 
+		if (command && ((state == 1) || (state == 3))) {
+			time_t t = time(NULL) - command_time;
+			if (t > CHECK_INTERVAL) {
+				// command should have finished, check it
+				fprintf(stderr, "Command %d did not finish within time.\n", state);
+				state = 4;
+				command = false;
+			}
+		}
+
 	}
 }
 
 static void publish_state(struct mosquitto *mosq)
 {
 	char *msg = NULL;
-
-	get_state();
 
 	if (published_state == state)
 		return;
@@ -246,7 +239,6 @@ int main(void)
 {
 	struct mosquitto *mosq = NULL;
 	int ret;
-	int interval = 0; // publish shortly after connecting to the server
 	config_t cfg;
 	const char *conf_server;
 	int conf_port;
@@ -299,9 +291,8 @@ int main(void)
 	}
 
 	ret = mosquitto_subscribe(mosq, NULL, topic_control, 0);
-	if (ret != 0) {
+	if (ret != 0)
 		fprintf(stderr, "mosquitto_subscribe: %d: %s\n", ret, strerror(errno));
-	}
 
 	fprintf(stderr, "connected, state topic = %s, control topic = %s\n",
 		topic_state, topic_control);
@@ -317,16 +308,11 @@ int main(void)
 			exit(EXIT_FAILURE);
 		}
 		
-		if (interval <= 0) {
-			publish_state(mosq);
-			interval = CHECK_INTERVAL;
-		}
-		interval -= 15;
+		get_state();
+		publish_state(mosq);
 
-		if (stop == 1) {
-			publish_state(mosq);
+		if (stop == 1)
 			break;
-		}
 	}
 
 	mosquitto_disconnect(mosq);
