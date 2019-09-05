@@ -78,6 +78,7 @@ static void get_sensor_data()
 	int closed = gpiod_ctxless_get_value("3", 22, true, GPIOD_CONSUMER);
 	if (closed < 0) {
 		fprintf(stderr, "gpiod sensor read 15: %d\n", closed);
+		state = 4;
 	} else {
 		sensor_closed = closed;
 	}
@@ -85,6 +86,7 @@ static void get_sensor_data()
 	int open = gpiod_ctxless_get_value("3", 15, true, GPIOD_CONSUMER);
 	if (open < 0) {
 		fprintf(stderr, "gpiod sensor read 22: %d\n", open);
+		state = 4;
 	} else {
 		sensor_open = open;
 	}
