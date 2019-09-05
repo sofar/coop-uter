@@ -224,10 +224,10 @@ static void message_callback(
 		gpiod_ctxless_set_value("3", 18, 0, true, GPIOD_CONSUMER, usl, NULL);
 	} else if (((char *)message->payload)[0] == 'q') {
 		// cancel commands, reset errors, read state
-
-		fprintf(stderr, "Cancelling command and error state\n");
-
-		command = false;
+		if (command) {
+			fprintf(stderr, "Cancelling command and error state\n");
+			command = false;
+		}
 		state = 5;
 		publish_state(mosq);
 	} else {
