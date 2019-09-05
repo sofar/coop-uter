@@ -17,7 +17,8 @@ renogy_pub_LDADD = \
 	$(config_LIBS)
 
 renogy_sys_LDADD = \
-	$(mosquitto_LIBS)
+	$(mosquitto_LIBS) \
+	$(config_LIBS)
 
 renogy_door_LDADD = \
 	$(mosquitto_LIBS) \
