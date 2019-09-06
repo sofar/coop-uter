@@ -30,12 +30,16 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <unistd.h>
+#include <signal.h>
 
 #include <modbus.h>
 #include <mosquitto.h>
 #include <libconfig.h>
 
 #define CONFIG_PATH "/etc/mqtt.conf"
+
+#define PUBLISH_INTERVAL 600
 
 static const char* charging_states[] = {
 	"charging deactivated",
@@ -66,48 +70,21 @@ static const char* fault_bits[FAULT_BITS_MAX] = {
 	"circuit, charge MOS short circuit"
 };
 
+static char *topic_control = NULL;
+static char *topic_state = NULL;
 
-int main(void) {
-	modbus_t *ctx;
-	int ret;
+static int stop = 0;
+
+
+static void sigfunc(int s __attribute__ ((unused)))
+{
+	stop = 1;
+}
+
+static void publish_state(struct mosquitto *mosq, modbus_t *ctx)
+{
 	uint16_t regs[64];
-	struct mosquitto *mosq = NULL;
-	config_t cfg;
-	const char *conf_server;
-	int conf_port;
-
-	// parse configs
-	config_init(&cfg);
-	if (!config_read_file(&cfg, CONFIG_PATH)) {
-		fprintf(stderr, "%s:%d - %s\n", config_error_file(&cfg), config_error_line(&cfg), config_error_text(&cfg));
-		exit(EXIT_FAILURE);
-	}
-
-	if (!config_lookup_string(&cfg, "server", &conf_server)) {
-		fprintf(stderr, "No server defined in " CONFIG_PATH "\n");
-		exit(EXIT_FAILURE);
-	}
-	if (!config_lookup_int(&cfg, "port", &conf_port)) {
-		fprintf(stderr, "No port defined in " CONFIG_PATH "\n");
-		exit(EXIT_FAILURE);
-	}
-
-	fprintf(stderr, "MQTT server: %s:%d\n", conf_server, conf_port);
-
-	ctx = modbus_new_rtu("/dev/ttyS1", 9600, 'N', 8, 1);
-	if (!ctx) {
-		perror("Unable to create the libmodbus context\n");
-		exit(EXIT_FAILURE);
-	}
-
-	// setup modbus
-	modbus_set_slave(ctx, 1);
-
-	if (modbus_connect(ctx) == -1) {
-		fprintf(stderr, "Connection failed: %s\n", modbus_strerror(errno));
-		modbus_free(ctx);
-		exit(EXIT_FAILURE);
-	}
+	int ret;
 
 	/* read info block regs */
 	memset(regs, 0, sizeof(regs));
@@ -117,19 +94,6 @@ int main(void) {
 		modbus_free(ctx);
 		exit(EXIT_FAILURE);
 	}
-
-	modbus_close(ctx);
-	modbus_free(ctx);
-
-	/* setup mqtt */
-	mosquitto_lib_init();
-	mosq = mosquitto_new(NULL, true, NULL);
-	if (!mosq)
-		exit(EXIT_FAILURE);
-	if (mosquitto_loop_start(mosq) != MOSQ_ERR_SUCCESS)
-		exit(EXIT_FAILURE);
-	if (mosquitto_connect(mosq, conf_server, conf_port, 15))
-		exit(EXIT_FAILURE);
 
 	/* create mqtt publish stream */
 	int battery_capacity = regs[0];
@@ -220,15 +184,121 @@ int main(void) {
 			state, error_strings) < 0)
 		exit(EXIT_FAILURE);
 
-	if (mosquitto_publish(mosq, NULL, "/renogy/wanderer/state", strlen(msg), msg, 0, true) != 0)
+	if (mosquitto_publish(mosq, NULL, topic_state, strlen(msg), msg, 0, true) != 0)
 		exit(EXIT_FAILURE);
 	free(msg);
+	
+}
+
+int main(void) {
+	modbus_t *ctx;
+	static struct mosquitto *mosq = NULL;
+	config_t cfg;
+	int ret;
+	int interval = 0;
+	const char *conf_server;
+	int conf_port;
+
+	// what to do if terminated
+	signal(SIGINT, sigfunc);
+	signal(SIGTERM, sigfunc);
+
+	// parse configs
+	config_init(&cfg);
+	if (!config_read_file(&cfg, CONFIG_PATH)) {
+		fprintf(stderr, "%s:%d - %s\n", config_error_file(&cfg), config_error_line(&cfg), config_error_text(&cfg));
+		exit(EXIT_FAILURE);
+	}
+
+	if (!config_lookup_string(&cfg, "server", &conf_server)) {
+		fprintf(stderr, "No server defined in " CONFIG_PATH "\n");
+		exit(EXIT_FAILURE);
+	}
+	if (!config_lookup_int(&cfg, "port", &conf_port)) {
+		fprintf(stderr, "No port defined in " CONFIG_PATH "\n");
+		exit(EXIT_FAILURE);
+	}
+
+	fprintf(stderr, "MQTT server: %s:%d\n", conf_server, conf_port);
+
+	// setup modbus
+	ctx = modbus_new_rtu("/dev/ttyS1", 9600, 'N', 8, 1);
+	if (!ctx) {
+		perror("Unable to create the libmodbus context\n");
+		exit(EXIT_FAILURE);
+	}
+
+	modbus_set_slave(ctx, 1);
+
+	if (modbus_connect(ctx) == -1) {
+		fprintf(stderr, "Connection failed: %s\n", modbus_strerror(errno));
+		modbus_free(ctx);
+		exit(EXIT_FAILURE);
+	}
+
+	// use system hostname here
+	char hostname[HOST_NAME_MAX+1];
+	hostname[HOST_NAME_MAX] = 0;
+	if (gethostname(hostname, HOST_NAME_MAX) != 0)
+		exit(EXIT_FAILURE);
+
+	// setup topics
+	if (!asprintf(&topic_state, "/%s/renogy/state", hostname))
+		exit(EXIT_FAILURE);
+	if (!asprintf(&topic_control, "/%s/renogy/control", hostname))
+		exit(EXIT_FAILURE);
+
+	/* setup mqtt */
+	mosquitto_lib_init();
+	mosq = mosquitto_new(NULL, true, NULL);
+	if (!mosq)
+		exit(EXIT_FAILURE);
+
+	//mosquitto_message_callback_set(mosq, message_callback);
+
+	while (mosquitto_connect(mosq, conf_server, conf_port, 15) != 0) {
+		fprintf(stderr, "Waiting for connection to server\n");
+		sleep(300);
+	}
+
+	//ret = mosquitto_subscribe(mosq, NULL, topic_control, 0);
+	//if (ret != 0) {
+	//	fprintf(stderr, "mosquitto_subscribe: %d: %s\n", ret, strerror(errno));
+	//}
+
+	fprintf(stderr, "connected, state topic = %s, control topic = %s\n",
+		topic_state, topic_control);
+
+	for (;;) {
+		ret = mosquitto_loop(mosq, 15000, 1);
+		if ((ret == MOSQ_ERR_CONN_LOST) || (ret == MOSQ_ERR_NO_CONN)) {
+			sleep(30);
+			fprintf(stderr, "Reconnecting to server\n");
+			mosquitto_reconnect(mosq);
+		} else if (ret != MOSQ_ERR_SUCCESS) {
+			fprintf(stderr, "mosquitto_loop(): %d, %s\n", ret, strerror(errno));
+			exit(EXIT_FAILURE);
+		}
+		
+		if (interval <= 0) {
+			publish_state(mosq, ctx);
+			interval = PUBLISH_INTERVAL;
+		}
+		interval -= 15;
+
+		if (stop == 1) {
+			publish_state(mosq, ctx);
+			break;
+		}
+	}
 
 	mosquitto_disconnect(mosq);
 	mosquitto_loop_stop(mosq, false);
 	mosquitto_destroy(mosq);
 	mosquitto_lib_cleanup();
 
+	modbus_close(ctx);
+	modbus_free(ctx);
+
 	config_destroy(&cfg);
 }
-
