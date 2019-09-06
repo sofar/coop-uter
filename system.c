@@ -113,8 +113,6 @@ void publish_state(struct mosquitto *mosq)
 		exit(EXIT_FAILURE);
 
 	free(msg);
-
-	fprintf(stderr, "published state info\n");
 }
 
 static void message_callback(
@@ -124,6 +122,7 @@ static void message_callback(
 {
 	char *tmp = NULL;
 
+	// use strncmp() instead?
 	if (!asprintf(&tmp, "%.*s", message->payloadlen, (char *)message->payload))
 		exit(EXIT_FAILURE);
 	
