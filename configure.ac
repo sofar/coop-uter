@@ -18,9 +18,20 @@ PKG_CHECK_MODULES([gpiod], [libgpiod])
 PKG_CHECK_MODULES([config], [libconfig])
 
 # Checks for header files.
+AC_CHECK_HEADERS([limits.h])
+AC_CHECK_HEADERS([stdlib.h])
+AC_CHECK_HEADERS([string.h])
+AC_CHECK_HEADERS([unistd.h])
+AC_CHECK_HEADER_STDBOOL
 
 # Checks for typedefs, structures, and compiler characteristics.
+AC_TYPE_INT8_T
+AC_TYPE_UINT16_T
 
 # Checks for library functions.
+AC_CHECK_FUNCS([gethostname])
+AC_CHECK_FUNCS([memset])
+AC_CHECK_FUNCS([strdup])
+AC_CHECK_FUNCS([strerror])
 
 AC_OUTPUT
