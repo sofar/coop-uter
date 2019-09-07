@@ -131,17 +131,23 @@ static void message_callback(
 		power_on = 0;
 		publish_state(mosq);
 		// then do the actual poweroff
+		if (system("/usr/bin/systemctl --no-block poweroff") != 0)
+			fprintf(stderr, "Error calling systemctl poweroff\n");
 	} else if (strcmp(tmp, "powersave") == 0) {
 		if (performance_mode == 1) {
 			fprintf(stderr, "Switching to powersave mode \n");
 			performance_mode = 0;
 			publish_state(mosq);
+			if (system("/usr/bin/systemctl start powersave.service") != 0)
+				fprintf(stderr, "Error enabling powersave mode\n");
 		}
 	} else if (strcmp(tmp, "performance") == 0) {
 		if (performance_mode == 0) {
 			fprintf(stderr, "Switching to performance mode\n");
 			performance_mode = 1;
 			publish_state(mosq);
+			if (system("/usr/bin/systemctl stop powersave.service") != 0)
+				fprintf(stderr, "Error disabling powersave mode\n");
 		}
 	}
 
