@@ -272,8 +272,7 @@ int main(void) {
 	for (;;) {
 		ret = mosquitto_loop(mosq, 15000, 1);
 		if ((ret == MOSQ_ERR_CONN_LOST) || (ret == MOSQ_ERR_NO_CONN)) {
-			sleep(30);
-			fprintf(stderr, "Reconnecting to server\n");
+			sleep(5);
 			mosquitto_reconnect(mosq);
 		} else if (ret != MOSQ_ERR_SUCCESS) {
 			fprintf(stderr, "mosquitto_loop(): %d, %s\n", ret, strerror(errno));
