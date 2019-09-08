@@ -32,6 +32,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
+#include <time.h>
 
 #include <modbus.h>
 #include <mosquitto.h>
@@ -195,9 +196,9 @@ int main(void) {
 	static struct mosquitto *mosq = NULL;
 	config_t cfg;
 	int ret;
-	int interval = 0;
 	const char *conf_server;
 	int conf_port;
+	time_t publish_time = (time_t)0;
 
 	// what to do if terminated
 	signal(SIGINT, sigfunc);
@@ -270,7 +271,7 @@ int main(void) {
 		topic_state, topic_control);
 
 	for (;;) {
-		ret = mosquitto_loop(mosq, 15000, 1);
+		ret = mosquitto_loop(mosq, 10000, 1);
 		if ((ret == MOSQ_ERR_CONN_LOST) || (ret == MOSQ_ERR_NO_CONN)) {
 			sleep(5);
 			mosquitto_reconnect(mosq);
@@ -278,16 +279,16 @@ int main(void) {
 			fprintf(stderr, "mosquitto_loop(): %d, %s\n", ret, strerror(errno));
 			exit(EXIT_FAILURE);
 		}
-		
-		if (interval <= 0) {
-			publish_state(mosq, ctx);
-			interval = PUBLISH_INTERVAL;
-		}
-		interval -= 15;
 
 		if (stop == 1) {
 			publish_state(mosq, ctx);
 			break;
+		}
+
+		time_t now = time(NULL);
+		if (now - publish_time > (time_t)PUBLISH_INTERVAL) {
+			publish_time = now;
+			publish_state(mosq, ctx);
 		}
 	}
 
