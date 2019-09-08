@@ -34,6 +34,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <string.h>
 #include <signal.h>
 #include <limits.h>
+#include <time.h>
 
 #include <mosquitto.h>
 #include <libconfig.h>
@@ -46,8 +47,8 @@ static char *topic_state = NULL;
 static int performance_mode = 1; // 0 == powersave
 static int power_on = 1; // 0 == off
 
-// 15 minute intervals between normal idle publishes
-#define PUBLISH_INTERVAL 900
+// 5 minute intervals between normal idle publishes
+#define PUBLISH_INTERVAL 300
 
 void sigfunc(int s __attribute__ ((unused)))
 {
@@ -158,10 +159,10 @@ int main(void)
 {
 	struct mosquitto *mosq = NULL;
 	int ret;
-	int interval = 0; // publish shortly after connecting to the server
 	config_t cfg;
 	const char *conf_server;
 	int conf_port;
+	time_t publish_time = (time_t)0;
 
 	// parse configs
 	config_init(&cfg);
@@ -207,7 +208,7 @@ int main(void)
 
 	while (mosquitto_connect(mosq, conf_server, conf_port, 15) != 0) {
 		fprintf(stderr, "Waiting for connection to server\n");
-		sleep(300);
+		sleep(15);
 	}
 
 	ret = mosquitto_subscribe(mosq, NULL, topic_control, 0);
@@ -228,15 +229,15 @@ int main(void)
 			exit(EXIT_FAILURE);
 		}
 		
-		if (interval <= 0) {
-			publish_state(mosq);
-			interval = PUBLISH_INTERVAL;
-		}
-		interval -= 15;
-
 		if (power_on == 0) {
 			publish_state(mosq);
 			break;
+		}
+
+		time_t now = time(NULL);
+		if (now - publish_time > (time_t)PUBLISH_INTERVAL) {
+			publish_time = now;
+			publish_state(mosq);
 		}
 	}
 
