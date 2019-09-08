@@ -304,7 +304,7 @@ int main(void)
 		topic_state, topic_control);
 
 	for (;;) {
-		ret = mosquitto_loop(mosq, 15000, 1);
+		ret = mosquitto_loop(mosq, 5000, 1);
 		if ((ret == MOSQ_ERR_CONN_LOST) || (ret == MOSQ_ERR_NO_CONN)) {
 			sleep(5);
 			mosquitto_reconnect(mosq);
