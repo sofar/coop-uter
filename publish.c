@@ -128,6 +128,9 @@ static void publish_state(struct mosquitto *mosq, modbus_t *ctx)
 
 	const char *state = charging_states[(int8_t) MODBUS_GET_LOW_BYTE( regs[0x20])];
 
+	int load_enable = regs[0x21] >> 7;
+	int load_brightness = regs[0x21] & 0x7f;
+
 	int errors = regs[0x22];
 	char *error_strings = NULL;
 	for (int b = 0; b < 15; b++) {
@@ -171,7 +174,9 @@ static void publish_state(struct mosquitto *mosq, modbus_t *ctx)
 			"\"charge_generated_day\":\"%.2f\","
 			"\"charge_consumed_day\":\"%.2f\","
 			"\"charging_state\":\"%s\","
-			"\"error_state\":\"%s\""
+			"\"error_state\":\"%s\","
+			"\"load_enable\":\"%d\","
+			"\"load_brightness\":\"%d\""
 			"}",
 			battery_capacity, battery_voltage, battery_current,
 			controller_temperature,
@@ -182,7 +187,7 @@ static void publish_state(struct mosquitto *mosq, modbus_t *ctx)
 			charge_power_max_day, discharge_power_max_day,
 			charge_amp_hours_day, discharge_amp_hours_day,
 			charge_generated_day, charge_consumed_day,
-			state, error_strings) < 0)
+			state, error_strings, load_enable, load_brightness) < 0)
 		exit(EXIT_FAILURE);
 
 	if (mosquitto_publish(mosq, NULL, topic_state, strlen(msg), msg, 0, true) != 0)
