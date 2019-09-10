@@ -24,22 +24,22 @@ in my free time.
 
 ## What's in it?
 
-- renogy-pub - a program that regularly reads out the libmodbus data
+- `publish.c` - a program that regularly reads out the libmodbus data
 from Renogy solar charge controllers with a serial port. The data is
 interpreted and relayed in curated form to the MQTT server.
 
-- renogy-sys - a program that regularly publishes OS/system state info
+- `system.c` - a program that regularly publishes OS/system state info
 to an MQTT server and can manipulate basic system state - power off,
 powersave/performance modes. These are based on the fact that I might
 want to shut down the system or suspend it with some script to make
 it use less power overnight when there is no powersource.
 
-- renogy-dump - a program to read out the libmodbus solar charge
+- `dump.c` - a program to read out the libmodbus solar charge
 controller data and dump it to standard out. Mostly for debugging and
 inspection purposes. With it I found out that the Renogy spec has 2
 values reversed.
 
-- renogy-door - a program to drive a shutter (door) using 2 GPIO's
+- `door.c` - a program to drive a shutter (door) using 2 GPIO's
 and track it's state through 2 more GPIO's connected to door
 sensors.
 
