@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([renogy-mqtt], [1], [sofar@foo-projects.org])
+AC_INIT([coop-uter], [1], [sofar@foo-projects.org])
 AM_INIT_AUTOMAKE([foreign -Wall -Werror -Wno-portability silent-rules subdir-objects color-tests no-dist-gzip dist-xz])
 AC_CONFIG_SRCDIR([dump.c])
 AC_CONFIG_HEADERS([config.h])
