@@ -162,7 +162,7 @@ int main(void)
 	config_t cfg;
 	const char *conf_server;
 	int conf_port;
-	time_t publish_time = (time_t)0;
+	time_t publish_time = time(NULL) - (time_t)PUBLISH_INTERVAL;
 
 	// parse configs
 	config_init(&cfg);

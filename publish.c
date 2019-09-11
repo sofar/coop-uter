@@ -203,7 +203,7 @@ int main(void) {
 	int ret;
 	const char *conf_server;
 	int conf_port;
-	time_t publish_time = (time_t)0;
+	time_t publish_time = time(NULL) - (time_t)PUBLISH_INTERVAL;
 
 	// what to do if terminated
 	signal(SIGINT, sigfunc);
