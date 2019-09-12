@@ -71,18 +71,21 @@ static const char* fault_bits[FAULT_BITS_MAX] = {
 	"circuit, charge MOS short circuit"
 };
 
+static modbus_t *ctx;
+
 static char *topic_control = NULL;
 static char *topic_state = NULL;
 
-static int stop = 0;
+static int load = 0;
 
+static int stop = 0;
 
 static void sigfunc(int s __attribute__ ((unused)))
 {
 	stop = 1;
 }
 
-static void publish_state(struct mosquitto *mosq, modbus_t *ctx)
+static void publish_state(struct mosquitto *mosq)
 {
 	uint16_t regs[64];
 	int ret;
@@ -193,11 +196,55 @@ static void publish_state(struct mosquitto *mosq, modbus_t *ctx)
 	if (mosquitto_publish(mosq, NULL, topic_state, strlen(msg), msg, 0, true) != 0)
 		exit(EXIT_FAILURE);
 	free(msg);
+}
+
+static void message_callback(
+		struct mosquitto *mosq,
+		void *obj __attribute__ ((unused)),
+		const struct mosquitto_message *message)
+{
+	char *tmp = NULL;
+
+	// use strncmp() instead?
+	if (!asprintf(&tmp, "%.*s", message->payloadlen, (char *)message->payload))
+		exit(EXIT_FAILURE);
+
+	int i = atoi(tmp);
 	
+	free(tmp);
+
+	if ((i < 0) || (i > 100))
+		return;
+
+	if (i == load)
+		return;
+
+	if ((load == 0) && (i > 0)) {
+		fprintf(stderr, "Load enabled, %d\n", i);
+		// modbus: write enable load
+		if (modbus_write_register(ctx, 0x10a, 1) < 0)
+			fprintf(stderr, "Error enabling load\n");
+		// modbus: write dimmer value
+		if (modbus_write_register(ctx, 0xe001, i) < 0)
+			fprintf(stderr, "Error setting dimmer value\n");
+	} else if ((load > 0) && (i == 0)) {
+		fprintf(stderr, "Load disabled\n");
+		// modbus: write disable load
+		if (modbus_write_register(ctx, 0x10a, 0) < 0)
+			fprintf(stderr, "Error disabling load\n");
+	} else {
+		fprintf(stderr, "Load changed, %d\n", i);
+		// modbus: write dimmer value
+		if (modbus_write_register(ctx, 0xe001, i) < 0)
+			fprintf(stderr, "Error settign dimmer value\n");
+	}
+
+	load = i;
+
+	publish_state(mosq);
 }
 
 int main(void) {
-	modbus_t *ctx;
 	static struct mosquitto *mosq = NULL;
 	config_t cfg;
 	int ret;
@@ -260,17 +307,17 @@ int main(void) {
 	if (!mosq)
 		exit(EXIT_FAILURE);
 
-	//mosquitto_message_callback_set(mosq, message_callback);
+	mosquitto_message_callback_set(mosq, message_callback);
 
 	while (mosquitto_connect(mosq, conf_server, conf_port, 15) != 0) {
 		fprintf(stderr, "Waiting for connection to server\n");
 		sleep(300);
 	}
 
-	//ret = mosquitto_subscribe(mosq, NULL, topic_control, 0);
-	//if (ret != 0) {
-	//	fprintf(stderr, "mosquitto_subscribe: %d: %s\n", ret, strerror(errno));
-	//}
+	ret = mosquitto_subscribe(mosq, NULL, topic_control, 0);
+	if (ret != 0) {
+		fprintf(stderr, "mosquitto_subscribe: %d: %s\n", ret, strerror(errno));
+	}
 
 	fprintf(stderr, "connected, state topic = %s, control topic = %s\n",
 		topic_state, topic_control);
@@ -286,14 +333,14 @@ int main(void) {
 		}
 
 		if (stop == 1) {
-			publish_state(mosq, ctx);
+			publish_state(mosq);
 			break;
 		}
 
 		time_t now = time(NULL);
 		if (now - publish_time > (time_t)PUBLISH_INTERVAL) {
 			publish_time = now;
-			publish_state(mosq, ctx);
+			publish_state(mosq);
 		}
 	}
 
