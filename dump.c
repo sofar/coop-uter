@@ -103,6 +103,17 @@ int main(void) {
 		fprintf(stderr, "Reg %04x: %04x\n", i + 0x100, regs[i]);
 	}
 
+	/* EEPROM */
+	memset(regs, 0, sizeof(regs));
+	ret = modbus_read_registers(ctx, 0xe001, 0x21, regs);
+	if (ret != 0x21)
+		fprintf(stderr, "Read error %d, %s\n", ret, strerror(errno));
+
+	fprintf(stderr, "\n\nEEPROM:\n");
+	for (int i = 0; i <= 0x21; i++) {
+		fprintf(stderr, "Reg %04x: %04x\n", i + 0xe001, regs[i]);
+	}
+
 	modbus_close(ctx);
 	modbus_free(ctx);
 }
