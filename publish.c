@@ -221,25 +221,33 @@ static void message_callback(
 
 	if ((load <= 0) && (i > 0)) {
 		fprintf(stderr, "Load enabled, %d\n", i);
-		// modbus: write enable load
+		// set load delay to 0
+		if (modbus_write_register(ctx, 0xe01e, 0) < 0)
+			fprintf(stderr, "Error clearing delay value\n");
+		// enable load
 		if (modbus_write_register(ctx, 0x10a, 1) < 0)
 			fprintf(stderr, "Error enabling load\n");
-		// modbus: write dimmer value
+		// set brightness value
 		if (modbus_write_register(ctx, 0xe001, i) < 0)
 			fprintf(stderr, "Error setting dimmer value\n");
 	} else if ((load > 0) && (i == 0)) {
 		fprintf(stderr, "Load disabled\n");
-		// modbus: write disable load
+		// disable load
 		if (modbus_write_register(ctx, 0x10a, 0) < 0)
 			fprintf(stderr, "Error disabling load\n");
+		// zero brightness
+		if (modbus_write_register(ctx, 0xe001, 0) < 0)
+			fprintf(stderr, "Error setting dimmer value\n");
 	} else {
 		fprintf(stderr, "Load changed, %d\n", i);
-		// modbus: write dimmer value
+		// change brightness
 		if (modbus_write_register(ctx, 0xe001, i) < 0)
-			fprintf(stderr, "Error settign dimmer value\n");
+			fprintf(stderr, "Error setting dimmer value\n");
 	}
 
 	load = i;
+
+	usleep(250000);
 
 	publish_state(mosq);
 }
