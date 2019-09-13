@@ -76,7 +76,7 @@ static modbus_t *ctx;
 static char *topic_control = NULL;
 static char *topic_state = NULL;
 
-static int load = 0;
+static int load = -1;
 
 static int stop = 0;
 
@@ -129,10 +129,10 @@ static void publish_state(struct mosquitto *mosq)
 	float charge_generated_day = regs[0x13] / 10000.;
 	float charge_consumed_day = regs[0x14] / 10000.;
 
-	const char *state = charging_states[(int8_t) MODBUS_GET_LOW_BYTE( regs[0x20])];
+	const char *state = charging_states[(int8_t) MODBUS_GET_LOW_BYTE(regs[0x20])];
 
-	int load_enable = regs[0x21] >> 7;
-	int load_brightness = regs[0x21] & 0x7f;
+	int load_enable = MODBUS_GET_HIGH_BYTE(regs[0x20]) >> 7;
+	int load_brightness = MODBUS_GET_HIGH_BYTE(regs[0x20]) & 0x7f;
 
 	int errors = regs[0x22];
 	char *error_strings = NULL;
@@ -219,7 +219,7 @@ static void message_callback(
 	if (i == load)
 		return;
 
-	if ((load == 0) && (i > 0)) {
+	if ((load <= 0) && (i > 0)) {
 		fprintf(stderr, "Load enabled, %d\n", i);
 		// modbus: write enable load
 		if (modbus_write_register(ctx, 0x10a, 1) < 0)
