@@ -193,6 +193,11 @@ static void publish_state(struct mosquitto *mosq)
 			state, error_strings, load_enable, load_brightness) < 0)
 		exit(EXIT_FAILURE);
 
+	// dump to local file too, we'll use it for various states
+	FILE *f = fopen("/run/panel-state.json", "w");
+	fprintf(f, "%s", msg);
+	fclose(f);
+
 	if (mosquitto_publish(mosq, NULL, topic_state, strlen(msg), msg, 0, true) != 0)
 		exit(EXIT_FAILURE);
 	free(msg);
